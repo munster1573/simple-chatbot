@@ -1,3 +1,4 @@
+import mammoth from "mammoth";
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import fs from "fs";
@@ -53,26 +54,35 @@ Additional MHST Requirements:
 - strengthen answers using healthcare and ICU examples where appropriate
 `;
 
-async function loadPDFs() {
+async function loadDocuments() {
   try {
     const dir = path.join(process.cwd(), "data/pdfs");
 
     if (!fs.existsSync(dir)) return "";
 
     const files = fs.readdirSync(dir);
+
     let combinedText = "";
 
     for (const file of files) {
+      const filePath = path.join(dir, file);
+
       if (file.endsWith(".pdf")) {
-        const data = fs.readFileSync(path.join(dir, file));
+        const data = fs.readFileSync(filePath);
         const parsed = await pdf(data);
-        combinedText += `\n\n[Source: ${file}]\n${parsed.text}`;
+        combinedText += `\n\n[PDF Source: ${file}]\n${parsed.text}`;
+      }
+
+      if (file.endsWith(".docx")) {
+        const data = fs.readFileSync(filePath);
+        const result = await mammoth.extractRawText({ buffer: data });
+        combinedText += `\n\n[DOCX Source: ${file}]\n${result.value}`;
       }
     }
 
     return combinedText;
   } catch (err) {
-    console.error("PDF load error:", err);
+    console.error("Document load error:", err);
     return "";
   }
 }
@@ -92,7 +102,7 @@ export async function POST(req: Request) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const pdfContext = await loadPDFs();
+    const documentContext = await loadDocuments();
 
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
@@ -103,8 +113,8 @@ export async function POST(req: Request) {
         },
         {
           role: "system",
-          content: pdfContext
-            ? `Use ONLY the following uploaded sources when relevant:\n${pdfContext}`
+          content: documentContext
+            ? `Use ONLY the following uploaded sources when relevant:\n${documentContext}`
             : "No uploaded sources available. Do NOT invent references.",
         },
         ...messages,
