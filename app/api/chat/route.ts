@@ -3,8 +3,7 @@ import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import pdf from "pdf-parse";
-
+const pdf = require("pdf-parse");
 const SYSTEM_PROMPT = `
 You are an academic assistant for a Master of Health Studies student at Athabasca University.
 
