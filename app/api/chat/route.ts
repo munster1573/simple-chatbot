@@ -47,7 +47,10 @@ Additional MHST Requirements:
 - format references in APA 7th edition style
 - do not use markdown symbols like ### or ---
 - use clean academic formatting suitable for direct assignment use
-- base answers on real, commonly known academic sources when possible
+- ONLY use information explicitly found in uploaded documents
+- NEVER use prior knowledge or external sources
+- If information is not found in uploaded documents, say:
+  "No supporting evidence found in uploaded sources"
 - do not fabricate DOIs or page numbers
 - if unsure, say "evidence is limited" instead of guessing
 - strengthen answers using healthcare and ICU examples where appropriate
@@ -112,9 +115,14 @@ export async function POST(req: Request) {
         },
         {
           role: "system",
-          content: documentContext
-            ? `Use ONLY the following uploaded sources when relevant:\n${documentContext}`
-            : "No uploaded sources available. Do NOT invent references.",
+content: documentContext
+  ? `You MUST ONLY use the following uploaded sources.
+Do NOT use any external knowledge.
+If the answer is not explicitly supported, say: "No supporting evidence found in uploaded sources."
+
+Uploaded sources:
+${documentContext}`
+  : "No uploaded sources available. Do NOT invent references.",
         },
         ...messages,
       ],
