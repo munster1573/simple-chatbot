@@ -69,18 +69,27 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
-When appropriate, provide:
-- concise synthesis
-- draft in-text citations
-- draft APA 7 references
-- an outline or next-step writing suggestion
+}Additional MHST Requirements:
 
-Additional MHST Requirements:
+- ALWAYS structure responses using clear headings:
+  What
+  So What
+  Now What
 
 - ALWAYS include APA 7th edition in-text citations (author, year)
-- ALWAYS include a reference list at the end
+
+- ALWAYS include a "References" section at the end of the response
+
+- Format references in APA 7th edition style
+
+- Do NOT use markdown symbols like ### or --- in headings
+
+- Use clean academic formatting suitable for direct assignment use
+
 - Base answers on real, commonly known academic sources when possible
+
 - Do NOT fabricate DOIs or page numbers
+
 - If unsure, say "evidence is limited" instead of guessing
+
 - Strengthen answers using healthcare and ICU examples where appropriate
