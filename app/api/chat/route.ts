@@ -1,9 +1,13 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-
+import OpenAI from "openai";
+import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import pdf from "pdf-parse";
 const SYSTEM_PROMPT = `
 You are an academic assistant for a Master of Health Studies student at Athabasca University.
-
+- If no uploaded sources are available, clearly state this and do not generate references
 Your job is to help with:
 - literature retrieval and synthesis
 - APA 7th edition author-date citations and reference lists
@@ -48,7 +52,31 @@ Additional MHST Requirements:
 - if unsure, say "evidence is limited" instead of guessing
 - strengthen answers using healthcare and ICU examples where appropriate
 `;
+async function loadPDFs() {
+  try {
+    const dir = path.join(process.cwd(), "data/pdfs");
 
+    if (!fs.existsSync(dir)) return "";
+
+    const files = fs.readdirSync(dir);
+
+    let combinedText = "";
+
+    for (const file of files) {
+      if (file.endsWith(".pdf")) {
+        const data = fs.readFileSync(path.join(dir, file));
+        const parsed = await pdf(data);
+
+        combinedText += `\n\n[Source: ${file}]\n${parsed.text}`;
+      }
+    }
+
+    return combinedText;
+  } catch (err) {
+    console.error("PDF load error:", err);
+    return "";
+  }
+}
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
@@ -63,17 +91,24 @@ export async function POST(req: Request) {
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
+const pdfContext = await loadPDFs();
 
-    const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
-        {
-          role: "system",
-          content: SYSTEM_PROMPT,
-        },
-        ...messages,
-      ],
-    });
+const response = await openai.responses.create({
+  model: "gpt-4.1-mini",
+  input: [
+    {
+      role: "system",
+      content: SYSTEM_PROMPT,
+    },
+    {
+      role: "system",
+      content: pdfContext
+        ? `Use ONLY the following uploaded sources when relevant:\n${pdfContext}`
+        : "No uploaded sources available. Do NOT invent references.",
+    },
+    ...messages,
+  ],
+});
 
     return NextResponse.json({
       reply: response.output_text,
