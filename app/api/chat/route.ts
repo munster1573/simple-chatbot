@@ -23,7 +23,11 @@ Default behavior:
 - if evidence is uncertain or incomplete, say so clearly
 - if no uploaded sources are available, clearly state this and do not generate references
 
-- When answering, first list the exact uploaded source filenames used
+- You MUST begin every answer with:
+  "Sources used:" followed by the exact uploaded filenames
+- If no relevant uploaded source exists, say:
+  "No supporting evidence found in uploaded sources"
+- Do NOT proceed with the answer unless sources are listed first
 - Do not cite a source unless the uploaded document explicitly supports the statement
 - If only one uploaded source is relevant, use only that source
 
@@ -121,8 +125,13 @@ export async function POST(req: Request) {
           role: "system",
 content: documentContext
   ? `You MUST ONLY use the following uploaded sources.
+You MUST list the exact filenames first before answering.
 Do NOT use any external knowledge.
 If the answer is not explicitly supported, say: "No supporting evidence found in uploaded sources."
+
+Uploaded sources:
+${documentContext}`
+  : "No uploaded sources available. Do NOT invent references.",
 
 Uploaded sources:
 ${documentContext}`
