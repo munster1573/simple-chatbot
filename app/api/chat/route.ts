@@ -1,9 +1,7 @@
-import mammoth from "mammoth";
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-const pdf = require("pdf-parse");
+import { retrieveRelevantChunks } from "@/lib/retrieval";
+
 const SYSTEM_PROMPT = `
 You are an academic assistant for a Master of Health Studies student at Athabasca University.
 
@@ -22,14 +20,13 @@ Default behavior:
 - clearly separate source-supported statements from general suggestions
 - if evidence is uncertain or incomplete, say so clearly
 - if no uploaded sources are available, clearly state this and do not generate references
-
-- You MUST begin every answer with:
+- you MUST begin every answer with:
   "Sources used:" followed by the exact uploaded filenames
-- If no relevant uploaded source exists, say:
+- if no relevant uploaded source exists, say:
   "No supporting evidence found in uploaded sources"
-- Do NOT proceed with the answer unless sources are listed first
-- Do not cite a source unless the uploaded document explicitly supports the statement
-- If only one uploaded source is relevant, use only that source
+- do not proceed with the answer unless sources are listed first
+- do not cite a source unless the uploaded document explicitly supports the statement
+- if only one uploaded source is relevant, use only that source
 
 The student often works on:
 - systems thinking
@@ -57,45 +54,12 @@ Additional MHST Requirements:
 - use clean academic formatting suitable for direct assignment use
 - ONLY use information explicitly found in uploaded documents
 - NEVER use prior knowledge or external sources
-- If information is not found in uploaded documents, say:
+- if information is not found in uploaded documents, say:
   "No supporting evidence found in uploaded sources"
 - do not fabricate DOIs or page numbers
 - if unsure, say "evidence is limited" instead of guessing
 - strengthen answers using healthcare and ICU examples where appropriate
 `;
-
-async function loadDocuments() {
-  try {
-    const dir = path.join(process.cwd(), "data/pdfs");
-
-    if (!fs.existsSync(dir)) return "";
-
-    const files = fs.readdirSync(dir);
-
-    let combinedText = "";
-
-    for (const file of files) {
-      const filePath = path.join(dir, file);
-
-      if (file.endsWith(".pdf")) {
-        const data = fs.readFileSync(filePath);
-        const parsed = await pdf(data);
-        combinedText += `\n\n[PDF Source: ${file}]\n${parsed.text}`;
-      }
-
-      if (file.endsWith(".docx")) {
-        const data = fs.readFileSync(filePath);
-        const result = await mammoth.extractRawText({ buffer: data });
-        combinedText += `\n\n[DOCX Source: ${file}]\n${result.value}`;
-      }
-    }
-
-    return combinedText;
-  } catch (err) {
-    console.error("Document load error:", err);
-    return "";
-  }
-}
 
 export async function POST(req: Request) {
   try {
@@ -112,7 +76,18 @@ export async function POST(req: Request) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const documentContext = await loadDocuments();
+    const userQuestion =
+      Array.isArray(messages) && messages.length > 0
+        ? messages[messages.length - 1]?.content || ""
+        : "";
+
+    const relevantChunks = await retrieveRelevantChunks(userQuestion);
+
+    const documentContext = relevantChunks.length
+      ? relevantChunks
+          .map((chunk) => `[Source: ${chunk.source}]\n${chunk.text}`)
+          .join("\n\n")
+      : "";
 
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
@@ -123,19 +98,15 @@ export async function POST(req: Request) {
         },
         {
           role: "system",
-content: documentContext
-  ? `You MUST ONLY use the following uploaded sources.
+          content: documentContext
+            ? `You MUST ONLY use the following uploaded sources.
 You MUST list the exact filenames first before answering.
 Do NOT use any external knowledge.
 If the answer is not explicitly supported, say: "No supporting evidence found in uploaded sources."
 
 Uploaded sources:
 ${documentContext}`
-  : "No uploaded sources available. Do NOT invent references.",
-
-Uploaded sources:
-${documentContext}`
-  : "No uploaded sources available. Do NOT invent references.",
+            : "No uploaded sources available. Do NOT invent references.",
         },
         ...messages,
       ],
