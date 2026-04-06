@@ -7,6 +7,7 @@ const pdf = require("pdf-parse");
 type DocChunk = {
   source: string;
   text: string;
+  citation: string;
 };
 
 async function extractTextFromFile(filePath: string, fileName: string): Promise<string> {
@@ -28,7 +29,23 @@ async function extractTextFromFile(filePath: string, fileName: string): Promise<
 function splitIntoChunks(text: string, size = 1200): string[] {
   const clean = text.replace(/\s+/g, " ").trim();
   if (!clean) return [];
+function inferCitation(fileName: string, text: string): string {
+  const lower = text.toLowerCase();
 
+  if (lower.includes("vandenbroeck") && lower.includes("2014")) {
+    return "Vandenbroeck et al., 2014";
+  }
+
+  if (lower.includes("price") && lower.includes("2016")) {
+    return "Price, 2016";
+  }
+
+  if (lower.includes("checkland") && lower.includes("1999")) {
+    return "Checkland, 1999";
+  }
+
+  return fileName;
+}
   const chunks: string[] = [];
   for (let i = 0; i < clean.length; i += size) {
     chunks.push(clean.slice(i, i + size));
@@ -61,10 +78,11 @@ export async function retrieveRelevantChunks(query: string): Promise<DocChunk[]>
     const chunks = splitIntoChunks(text);
 
     for (const chunk of chunks) {
-      allChunks.push({
-        source: file,
-        text: chunk,
-      });
+allChunks.push({
+  source: file,
+  text: chunk,
+  citation: inferCitation(file, chunk),
+});
     }
   }
 
@@ -76,7 +94,7 @@ export async function retrieveRelevantChunks(query: string): Promise<DocChunk[]>
     .filter((chunk) => chunk.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 6)
-    .map(({ source, text }) => ({ source, text }));
+.map(({ source, text, citation }) => ({ source, text, citation }));
 
   return ranked;
 }
