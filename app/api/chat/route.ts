@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { retrieveRelevantChunks } from "@/lib/retrieval";
+import { retrieveRelevantChunks } from "../../../lib/retrieval";
 
 const SYSTEM_PROMPT = `
 You are an academic assistant for a Master of Health Studies student at Athabasca University.
