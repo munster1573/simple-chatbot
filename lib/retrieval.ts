@@ -9,7 +9,23 @@ type DocChunk = {
   text: string;
   citation: string;
 };
+function inferCitation(fileName: string, text: string): string {
+  const lower = text.toLowerCase();
 
+  if (lower.includes("vandenbroeck") && lower.includes("2014")) {
+    return "Vandenbroeck et al., 2014";
+  }
+
+  if (lower.includes("price") && lower.includes("2016")) {
+    return "Price, 2016";
+  }
+
+  if (lower.includes("checkland") && lower.includes("1999")) {
+    return "Checkland, 1999";
+  }
+
+  return fileName;
+}
 async function extractTextFromFile(filePath: string, fileName: string): Promise<string> {
   const data = fs.readFileSync(filePath);
 
@@ -63,7 +79,23 @@ function scoreChunk(chunk: string, query: string): number {
   }
   return score;
 }
+function inferCitation(fileName: string, text: string): string {
+  const lower = text.toLowerCase();
 
+  if (lower.includes("vandenbroeck") && lower.includes("2014")) {
+    return "Vandenbroeck et al., 2014";
+  }
+
+  if (lower.includes("price") && lower.includes("2016")) {
+    return "Price, 2016";
+  }
+
+  if (lower.includes("checkland") && lower.includes("1999")) {
+    return "Checkland, 1999";
+  }
+
+  return fileName;
+}
 export async function retrieveRelevantChunks(query: string): Promise<DocChunk[]> {
   const dir = path.join(process.cwd(), "data/pdfs");
   if (!fs.existsSync(dir)) return [];
